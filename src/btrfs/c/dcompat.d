@@ -25,6 +25,6 @@ alias c_int = int;
 
 enum NULL = null;
 
-package enum typesafe = true; // Use D frills
+/*package*/ enum typesafe = true; // Use D frills
 
 enum __SIZEOF_LONG__ = c_long.sizeof;
