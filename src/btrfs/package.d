@@ -206,6 +206,8 @@ void enumerateChunks(
 	);
 }
 
+private ubyte[SZ_64K] logicalInoBuf;
+
 /// Get inode at this logical offset
 void logicalIno(
 	/// File descriptor to the root (subvolume) containing the inode
@@ -227,22 +229,23 @@ void logicalIno(
 	/// this allows querying which file is pinning the offset.
 	bool ignoreOffset = false,
 	/// Query buffer size
-	size_t size = SZ_64K,
+	ubyte[] buf = logicalInoBuf[],
 )
 {
 	u64 flags = 0;
 	if (ignoreOffset)
 		flags |= BTRFS_LOGICAL_INO_ARGS_IGNORE_OFFSET;
 
-	auto inodes = cast(btrfs_data_container*)(new ubyte[size]).ptr;
+	assert(buf.length > btrfs_data_container.sizeof);
+	auto inodes = cast(btrfs_data_container*)buf.ptr;
 
 	ulong request = BTRFS_IOC_LOGICAL_INO;
-	if (size > SZ_64K || flags != 0)
+	if (buf.length > SZ_64K || flags != 0)
 		request = BTRFS_IOC_LOGICAL_INO_V2;
 
 	btrfs_ioctl_logical_ino_args loi;
 	loi.logical = logical;
-	loi.size = size;
+	loi.size = buf.length;
 	loi.flags = flags;
 	loi.inodes = cast(__u64)inodes;
 
