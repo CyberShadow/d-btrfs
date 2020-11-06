@@ -351,3 +351,64 @@ void findRootBackRef(
 		}
 	);
 }
+
+/// Clone a file range
+void cloneRange(
+	/// Source file descriptor
+	int srcFile,
+	/// Offset in source file to clone from
+	ulong srcOffset,
+	/// Target file descriptor
+	int dstFile,
+	/// Offset in target file to clone over
+	ulong dstOffset,
+	/// Number of bytes to clone
+	ulong length,
+)
+{
+	btrfs_ioctl_clone_range_args args;
+
+	args.src_fd = srcFile;
+	args.src_offset = srcOffset;
+	args.src_length = length;
+	args.dest_offset = dstOffset;
+
+	int ret = ioctl(dstFile, BTRFS_IOC_CLONE_RANGE, &args);
+	errnoEnforce(ret >= 0, "ioctl(BTRFS_IOC_CLONE_RANGE)");
+}
+
+unittest
+{
+	if (!checkBtrfs())
+		return;
+	import std.range, std.random, std.algorithm, std.file;
+	import std.stdio : File;
+	enum blockSize = 16*1024; // TODO: detect
+	auto data = blockSize.iota.map!(n => uniform!ubyte).array();
+	std.file.write("test1.bin", data);
+	scope(exit) remove("test1.bin");
+	auto f1 = File("test1.bin", "rb");
+	scope(exit) remove("test2.bin");
+	auto f2 = File("test2.bin", "wb");
+	cloneRange(f1.fileno, 0, f2.fileno, 0, blockSize);
+	f2.close();
+	f1.close();
+	assert(std.file.read("test2.bin") == data);
+}
+
+version (unittest)
+{
+	import ae.sys.file;
+	import std.stdio : stderr;
+
+	bool checkBtrfs(string moduleName = __MODULE__)()
+	{
+		auto fs = getPathFilesystem(".");
+		if (fs != "btrfs")
+		{
+			stderr.writefln("Current filesystem is %s, not btrfs, skipping %s test.", fs, moduleName);
+			return false;
+		}
+		return true;
+	}
+}
