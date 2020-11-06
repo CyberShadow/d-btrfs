@@ -378,6 +378,7 @@ void cloneRange(
 	errnoEnforce(ret >= 0, "ioctl(BTRFS_IOC_CLONE_RANGE)");
 }
 
+version (btrfsUnittest)
 unittest
 {
 	if (!checkBtrfs())
@@ -451,6 +452,7 @@ SameExtentResult sameExtent(in Extent[] extents, ulong length)
 	return result;
 }
 
+version (btrfsUnittest)
 unittest
 {
 	if (!checkBtrfs())
@@ -485,7 +487,7 @@ unittest
 	}
 }
 
-version (unittest)
+version (btrfsUnittest)
 {
 	import ae.sys.file;
 	import std.stdio : stderr;

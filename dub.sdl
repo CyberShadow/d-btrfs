@@ -4,3 +4,7 @@ license "GPL v2"
 targetType "library"
 
 dependency "ae" version="~>0.0.2830"
+
+configuration "unittest" {
+	versions "btrfsUnittest"
+}
