@@ -228,7 +228,7 @@ void logicalIno(
 	/// If this particular offset is not in use by any file but the extent is,
 	/// this allows querying which file is pinning the offset.
 	bool ignoreOffset = false,
-	/// Query buffer size
+	/// Query buffer
 	ubyte[] buf = logicalInoBuf[],
 )
 {
