@@ -1,7 +1,7 @@
 name "btrfs"
 description "btrfs API for D"
 license "GPL v2"
-targetType "library"
+targetType "sourceLibrary"
 
 dependency "ae" version="~>0.0.2830"
 
