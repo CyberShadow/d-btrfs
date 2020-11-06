@@ -1,5 +1,6 @@
 module btrfs;
 
+import core.stdc.errno;
 import core.sys.posix.sys.ioctl;
 
 import std.algorithm.comparison;
@@ -394,6 +395,94 @@ unittest
 	f2.close();
 	f1.close();
 	assert(std.file.read("test2.bin") == data);
+}
+
+struct Extent
+{
+	int fd;
+	ulong offset;
+}
+
+struct SameExtentResult
+{
+	ulong totalBytesDeduped;
+}
+
+SameExtentResult sameExtent(in Extent[] extents, ulong length)
+{
+	assert(extents.length >= 2, "Need at least 2 extents to deduplicate");
+
+	auto buf = new ubyte[
+		      btrfs_ioctl_same_args.sizeof +
+		      btrfs_ioctl_same_extent_info.sizeof * extents.length];
+	auto same = cast(btrfs_ioctl_same_args*) buf.ptr;
+
+	same.length = length;
+	same.logical_offset = extents[0].offset;
+	enforce(extents.length < ushort.max, "Too many extents");
+	same.dest_count = cast(ushort)(extents.length - 1);
+
+	foreach (i, ref extent; extents[1..$])
+	{
+		same.info.ptr[i].fd = extent.fd;
+		same.info.ptr[i].logical_offset = extent.offset;
+		same.info.ptr[i].status = -1;
+	}
+
+	int ret = ioctl(extents[0].fd, BTRFS_IOC_FILE_EXTENT_SAME, same);
+	errnoEnforce(ret >= 0, "ioctl(BTRFS_IOC_FILE_EXTENT_SAME)");
+
+	SameExtentResult result;
+
+	foreach (i, ref extent; extents[1..$])
+	{
+		auto status = same.info.ptr[i].status;
+		if (status)
+		{
+			enforce(status != BTRFS_SAME_DATA_DIFFERS,
+				"Extent #%d differs".format(i+1));
+			errno = -status;
+			errnoEnforce(false,
+				"Deduplicating extent #%d returned status %d".format(i+1, status));
+		}
+		result.totalBytesDeduped += same.info.ptr[i].bytes_deduped;
+	}
+
+	return result;
+}
+
+unittest
+{
+	if (!checkBtrfs())
+		return;
+	import std.range, std.random, std.algorithm, std.file;
+	import std.stdio : File;
+	enum blockSize = 16*1024; // TODO: detect
+	auto data = blockSize.iota.map!(n => uniform!ubyte).array();
+	std.file.write("test1.bin", data);
+	scope(exit) remove("test1.bin");
+	std.file.write("test2.bin", data);
+	scope(exit) remove("test2.bin");
+
+	{
+		auto f1 = File("test1.bin", "r+b");
+		auto f2 = File("test2.bin", "r+b");
+		sameExtent([
+			Extent(f1.fileno, 0),
+			Extent(f2.fileno, 0),
+		], blockSize);
+	}
+
+	{
+		data[0]++;
+		std.file.write("test2.bin", data);
+		auto f1 = File("test1.bin", "r+b");
+		auto f2 = File("test2.bin", "r+b");
+		assertThrown!Exception(sameExtent([
+			Extent(f1.fileno, 0),
+			Extent(f2.fileno, 0),
+		], blockSize));
+	}
 }
 
 version (unittest)
