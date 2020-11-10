@@ -2,6 +2,8 @@ module btrfs;
 
 import core.stdc.errno;
 import core.sys.posix.sys.ioctl;
+import core.sys.posix.sys.stat;
+import core.sys.posix.sys.types;
 
 import std.algorithm.comparison;
 import std.exception;
@@ -15,6 +17,57 @@ import btrfs.c.ioctl;
 import btrfs.c.kerncompat;
 import btrfs.c.kernel_shared.ctree;
 import btrfs.c.kernel_lib.sizes;
+
+private
+{
+	alias __fsword_t = uint;
+	struct fsid_t { int[2] __val; }
+	struct statfs_t
+	{
+		__fsword_t f_type;
+		__fsword_t f_bsize;
+		fsblkcnt_t f_blocks;
+		fsblkcnt_t f_bfree;
+		fsblkcnt_t f_bavail;
+		fsfilcnt_t f_files;
+		fsfilcnt_t f_ffree;
+		fsid_t     f_fsid;
+		__fsword_t f_namelen;
+		__fsword_t f_frsize;
+		__fsword_t f_flags;
+		__fsword_t[5] f_spare;
+		ubyte[4096 - 88] __unknown; // D - seems to vary A LOT across platforms / libcs
+	}
+	extern(C) int fstatfs(int fd, statfs_t* buf);
+}
+
+enum BTRFS_SUPER_MAGIC = 0x9123683E;
+
+/// Returns true is fd is on a btrfs filesystem.
+bool isBTRFS(int fd)
+{
+	statfs_t sfs;
+	fstatfs(fd, &sfs).eq(0).errnoEnforce("fstatfs");
+	return sfs.f_type == BTRFS_SUPER_MAGIC;
+}
+
+/// Returns true is fd is the root of a btrfs subvolume.
+bool isSubvolume(int fd)
+{
+	stat_t st;
+	fstat(fd, &st).eq(0).errnoEnforce("fstat");
+	return st.st_ino == BTRFS_FIRST_FREE_OBJECTID;
+}
+
+/// Returns the subvolume ID containing the file open in fd.
+u64 getSubvolumeID(int fd)
+{
+	btrfs_ioctl_ino_lookup_args args;
+	args.treeid = 0;
+	args.objectid = BTRFS_FIRST_FREE_OBJECTID;
+	ioctl(fd, BTRFS_IOC_INO_LOOKUP, &args).eq(0).errnoEnforce("ino lookup");
+	return args.treeid;
+}
 
 enum __u64[2] treeSearchAllObjectIDs = [0, -1];
 enum __u64[2] treeSearchAllOffsets   = [0, -1];
