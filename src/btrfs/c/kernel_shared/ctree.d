@@ -1171,7 +1171,7 @@ struct btrfs_fs_info {
 		uint, q{avoid_sys_chunk_alloc}, 1,
 		uint, q{finalize_on_close}, 1,
 		uint, q{hide_names}, 1,
-		uint, null, 4,
+		uint, q{}, 4,
 	));
 
 	int transaction_aborted;
