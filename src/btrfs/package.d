@@ -69,6 +69,44 @@ u64 getSubvolumeID(int fd)
 	return args.treeid;
 }
 
+btrfs_ioctl_fs_info_args getInfo(int fd)
+{
+	btrfs_ioctl_fs_info_args args;
+	ioctl(fd, BTRFS_IOC_FS_INFO, &args).eq(0).errnoEnforce("fs info");
+	return args;
+}
+
+btrfs_ioctl_dev_info_args getDevInfo(int fd, u64 devid)
+{
+	btrfs_ioctl_dev_info_args args;
+	args.devid = devid;
+	ioctl(fd, BTRFS_IOC_DEV_INFO, &args).eq(0).errnoEnforce("dev info");
+	return args;
+}
+
+btrfs_ioctl_dev_info_args[] getDevices(int fd)
+{
+	btrfs_ioctl_dev_info_args[] result;
+
+	auto info = fd.getInfo();
+
+	foreach (i; 0 .. info.max_id + 1)
+	{
+		btrfs_ioctl_dev_info_args devInfo;
+		try
+			devInfo = fd.getDevInfo(i);
+		catch (ErrnoException e)
+			if (e.errno == ENODEV)
+				continue;
+			else
+				throw e;
+		result ~= devInfo;
+	}
+
+	enforce(result.length == info.num_devices, "Unexpected number of devices");
+	return result;
+}
+
 enum __u64[2] treeSearchAllObjectIDs = [0, -1];
 enum __u64[2] treeSearchAllOffsets   = [0, -1];
 enum __u64[2] treeSearchAllTransIDs  = [0, -1];
@@ -256,6 +294,40 @@ void enumerateChunks(
 		(const ref btrfs_ioctl_search_header header, const ref btrfs_chunk chunk)
 		{
 			callback(header.offset, chunk);
+		}
+	);
+}
+
+/// Enumerate all device allocations in the filesystem.
+/// This is roughly the inverse of enumerateChunks.
+void enumerateDevExtents(
+	/// Handle to the filesystem
+	int fd,
+	/// Result callback
+	scope void delegate(
+		/// Device ID
+		u64 devid,
+		/// Extent physical address
+		u64 offset,
+		/// Extent info
+		const ref btrfs_dev_extent chunk,
+	) callback,
+	/// Filter device. Default is all devices.
+	__u64[2] devIDs = treeSearchAllObjectIDs,
+)
+{
+	treeSearch!(
+		BTRFS_DEV_EXTENT_KEY,
+		btrfs_dev_extent,
+	)(
+		fd,
+		BTRFS_DEV_TREE_OBJECTID,
+		devIDs,
+		treeSearchAllOffsets,
+		treeSearchAllTransIDs,
+		(const ref btrfs_ioctl_search_header header, const ref btrfs_dev_extent chunk)
+		{
+			callback(header.objectid, header.offset, chunk);
 		}
 	);
 }
