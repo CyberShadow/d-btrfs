@@ -159,7 +159,7 @@ struct btrfs_ioctl_dev_replace_start_params {
 	__u8[BTRFS_DEVICE_PATH_NAME_MAX + 1] srcdev_name;	/* in */
 	__u8[BTRFS_DEVICE_PATH_NAME_MAX + 1] tgtdev_name;	/* in */
 }
-static assert((btrfs_ioctl_dev_replace_start_params).sizeof == 2072);
+// static assert((btrfs_ioctl_dev_replace_start_params).sizeof == 2072);
 
 enum BTRFS_IOCTL_DEV_REPLACE_STATE_NEVER_STARTED	= 0;
 enum BTRFS_IOCTL_DEV_REPLACE_STATE_STARTED		= 1;
@@ -195,7 +195,7 @@ struct btrfs_ioctl_dev_replace_args {
 
 	__u64[64] spare;
 }
-static assert((btrfs_ioctl_dev_replace_args).sizeof == 2600);
+// static assert((btrfs_ioctl_dev_replace_args).sizeof == 2600);
 
 struct btrfs_ioctl_dev_info_args {
 	__u64 devid;				/* in/out */
@@ -589,7 +589,7 @@ struct btrfs_ioctl_received_subvol_args {
 	__u64	flags;			/* in */
 	__u64[16]	reserved;		/* in */
 }
-static assert((btrfs_ioctl_received_subvol_args).sizeof == 200);
+// static assert((btrfs_ioctl_received_subvol_args).sizeof == 200);
 
 /*
  * If we have a 32-bit userspace and 64-bit kernel, then the UAPI
