@@ -19,6 +19,8 @@
 /// D translation of ioctl.h from btrfs-progs (v5.9)
 module btrfs.c.ioctl;
 
+extern(C):
+
 import core.sys.posix.sys.ioctl;
 
 import btrfs.c.kerncompat;
