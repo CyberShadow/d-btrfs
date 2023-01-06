@@ -1,6 +1,5 @@
 module btrfs;
 
-import core.stdc.config;
 import core.stdc.errno;
 import core.sys.posix.sys.ioctl;
 import core.sys.posix.sys.stat;
@@ -366,7 +365,7 @@ void logicalIno(
 	assert(buf.length > btrfs_data_container.sizeof);
 	auto inodes = cast(btrfs_data_container*)buf.ptr;
 
-	c_ulong request = BTRFS_IOC_LOGICAL_INO;
+	int request = BTRFS_IOC_LOGICAL_INO;
 	if (buf.length > SZ_64K || flags != 0)
 		request = BTRFS_IOC_LOGICAL_INO_V2;
 
