@@ -628,3 +628,19 @@ version (btrfsUnittest)
 		return true;
 	}
 }
+
+/// Delete a btrfs subvolume by its ID.
+void deleteSubvolume(
+	/// File descriptor of the filesystem.
+	int fd,
+	/// The subvolume's tree ID.
+	u64 subvolumeID,
+)
+{
+	btrfs_ioctl_vol_args_v2 args;
+	args.flags = BTRFS_SUBVOL_SPEC_BY_ID;
+	args.subvolid = subvolumeID;
+
+	int ret = ioctl(fd, BTRFS_IOC_SNAP_DESTROY_V2, &args);
+	errnoEnforce(ret >= 0, "ioctl(BTRFS_IOC_SNAP_DESTROY_V2)");
+}
