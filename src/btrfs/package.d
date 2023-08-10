@@ -401,7 +401,7 @@ void inoPaths(
 		btrfs_data_container container;
 		ubyte[0x10000] buf;
 	}
-	Buf fspath;
+	Buf fspath = void;
 
 	btrfs_ioctl_ino_path_args ipa;
 	ipa.inum = inode;
