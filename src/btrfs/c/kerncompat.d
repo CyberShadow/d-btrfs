@@ -41,7 +41,7 @@ enum __GFP_BITS_SHIFT = 20;
 enum __GFP_BITS_MASK = (cast(int)((1 << __GFP_BITS_SHIFT) - 1));
 enum GFP_KERNEL = 0;
 enum GFP_NOFS = 0;
-enum ARRAY_SIZE(T, size_t n)(ref T[n] x) { return n; }
+auto ARRAY_SIZE(T, size_t n)(ref T[n] x) { return n; }
 
 public import core.stdc.limits : ULONG_MAX;
 
