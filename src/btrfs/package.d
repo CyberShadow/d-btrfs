@@ -478,6 +478,48 @@ void findRootBackRef(
 	);
 }
 
+/// Subvolume metadata from root item
+struct RootItemInfo
+{
+	/// Creation time (seconds since epoch), or 0 if unavailable
+	long otime;
+	/// Subvolume flags
+	ulong flags;
+}
+
+/// Find a root's metadata from its root item
+/// Returns RootItemInfo.init if not found
+RootItemInfo findRootItem(
+	/// Handle to the filesystem
+	int fd,
+	/// The root ID to query
+	__u64 rootID,
+)
+{
+	RootItemInfo result;
+	treeSearch!(
+		BTRFS_ROOT_ITEM_KEY,
+		btrfs_root_item,
+	)(
+		fd,
+		BTRFS_ROOT_TREE_OBJECTID,
+		[rootID, rootID],
+		treeSearchAllOffsets,
+		treeSearchAllTransIDs,
+		(const ref btrfs_ioctl_search_header header, const ref btrfs_root_item data)
+		{
+			// Check if this is a v2 root item with valid otime
+			// (generation_v2 must match generation for new fields to be valid)
+			if (data.generation_v2 == data.generation)
+			{
+				result.otime = data.otime.sec;
+			}
+			result.flags = data.flags;
+		}
+	);
+	return result;
+}
+
 /// Clone a file range
 void cloneRange(
 	/// Source file descriptor
